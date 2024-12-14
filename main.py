@@ -2,13 +2,10 @@ from flask import Flask, request, jsonify, abort
 from flask_mysqldb import MySQL
 
 app = Flask(__name__)
-
-# Configure MySQL
 app.config["MYSQL_HOST"] = "localhost"
 app.config["MYSQL_USER"] = "root"
 app.config["MYSQL_PASSWORD"] = "root"
 app.config["MYSQL_DB"] = "Leagues"
-
 mysql = MySQL(app)
 
 def handle_error(error_msg, status_code):
