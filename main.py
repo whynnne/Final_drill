@@ -5,7 +5,7 @@ app = Flask(__name__)
 app.config["MYSQL_HOST"] = "localhost"
 app.config["MYSQL_USER"] = "root"
 app.config["MYSQL_PASSWORD"] = "root"
-app.config["MYSQL_DB"] = "Leagues"
+app.config["MYSQL_DB"] = "leagues"
 mysql = MySQL(app)
 
 def handle_error(error_msg, status_code):
@@ -13,47 +13,26 @@ def handle_error(error_msg, status_code):
 
 @app.route("/")
 def hello_world():
-    return "WELCOME TO LEAGUES DATABASE"
+    return "WELCOME TO THE LEAGUES DATABASE"
 
-@app.route("/players")
-def get_players():
+@app.route("/leagues")
+def get_leagues():
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT * FROM Players")
-    players = cursor.fetchall()
-    if not players:
-        return handle_error("No players found", 404)
-    
-    players_list = [
+    cursor.execute("SELECT * FROM Leagues")
+    leagues = cursor.fetchall()
+    if not leagues:
+        return handle_error("No leagues found", 404)
+
+    leagues_list = [
         {
-            "player_id": player[0], 
-            "first_name": player[1],
-            "last_name": player[2],
-            "gender": player[3],
-            "address": player[4]
+            "league_ID": league[0], 
+            "name": league[1],
+            "country": league[2]
         }
-        for player in players
+        for league in leagues
     ]
     
-    return jsonify(players_list), 200
-
-@app.route("/games")
-def get_games():
-    cursor = mysql.connection.cursor()
-    cursor.execute("SELECT * FROM Games")
-    games = cursor.fetchall()
-    if not games:
-        return handle_error("No games found", 404)
-
-    games_list = [
-        {
-            "game_code": game[0], 
-            "game_name": game[1], 
-            "game_description": game[2]
-        }
-        for game in games
-    ]
-    
-    return jsonify(games_list), 200
+    return jsonify(leagues_list), 200
 
 @app.route("/teams")
 def get_teams():
@@ -65,15 +44,35 @@ def get_teams():
 
     teams_list = [
         {
-            "team_id": team[0], 
-            "team_name": team[1], 
-            "created_by_player_id": team[2], 
-            "date_created": team[3]
+            "team_ID": team[0], 
+            "name": team[1], 
+            "league_ID": team[2]
         }
         for team in teams
     ]
     
     return jsonify(teams_list), 200
+
+@app.route("/players")
+def get_players():
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT * FROM Players")
+    players = cursor.fetchall()
+    if not players:
+        return handle_error("No players found", 404)
+
+    players_list = [
+        {
+            "player_ID": player[0], 
+            "name": player[1], 
+            "age": player[2], 
+            "position": player[3], 
+            "team_ID": player[4]
+        }
+        for player in players
+    ]
+    
+    return jsonify(players_list), 200
 
 @app.route("/matches")
 def get_matches():
@@ -85,141 +84,156 @@ def get_matches():
 
     matches_list = [
         {
-            "match_id": match[0],
-            "game_code": match[1], 
-            "team_1_id": match[2], 
-            "team_2_id": match[3], 
-            "match_date": match[4], 
-            "result": match[5]
+            "match_ID": match[0],
+            "home_team_ID": match[1], 
+            "away_team_ID": match[2], 
+            "date": match[3], 
+            "home_score": match[4], 
+            "away_score": match[5]
         }
         for match in matches
     ]
     
     return jsonify(matches_list), 200
 
-@app.route("/players", methods=["POST"])
-def add_player():
+@app.route("/leagues", methods=["POST"])
+def add_league():
     data = request.get_json()
-    first_name = data.get('first_name')
-    last_name = data.get('last_name')
-    gender = data.get('gender')
-    address = data.get('address')
+    league_id = data.get('league_ID')
+    name = data.get('name')
+    country = data.get('country')
 
-    if not all([first_name, last_name, gender, address]):
+    if not all([league_id, name, country]):
         return handle_error("Missing required fields", 400)
-    
-    cursor = mysql.connection.cursor()
-    cursor.execute(
-        "INSERT INTO Players (first_name, last_name, gender, address) VALUES (%s, %s, %s, %s)",
-        (first_name, last_name, gender, address)
-    )
-    mysql.connection.commit()
-
-    cursor.execute("SELECT * FROM Players WHERE player_id = LAST_INSERT_ID()")
-    player = cursor.fetchone()
-
-    if not player:
-        return handle_error("Failed to retrieve the added player", 500)
-
-    return jsonify({
-        "player_id": player[0], 
-        "first_name": player[1],
-        "last_name": player[2],
-        "gender": player[3],
-        "address": player[4]
-    }), 201
-
-@app.route("/games", methods=["POST"])
-def add_game():
-    data = request.get_json()
-    game_name = data.get('game_name')
-    game_description = data.get('game_description')
-
-    if not game_name:
-        return handle_error("Game name is required", 400)
 
     cursor = mysql.connection.cursor()
     cursor.execute(
-        "INSERT INTO Games (game_name, game_description) VALUES (%s, %s)", 
-        (game_name, game_description)
+        "INSERT INTO Leagues (League_ID, Name, Country) VALUES (%s, %s, %s)", 
+        (league_id, name, country)
     )
     mysql.connection.commit()
 
-    cursor.execute("SELECT * FROM Games WHERE game_code = LAST_INSERT_ID()")
-    game = cursor.fetchone()
+    cursor.execute("SELECT * FROM Leagues WHERE League_ID = %s", (league_id,))
+    league = cursor.fetchone()
 
-    if not game:
-        return handle_error("Failed to retrieve the added game", 500)
+    if not league:
+        return handle_error("Failed to retrieve the added league", 500)
 
     return jsonify({
-        "game_code": game[0], 
-        "game_name": game[1], 
-        "game_description": game[2]
+        "league_ID": league[0], 
+        "name": league[1],
+        "country": league[2]
     }), 201
 
 @app.route("/teams", methods=["POST"])
 def add_team():
     data = request.get_json()
-    team_name = data.get('team_name')
-    created_by_player_id = data.get('created_by_player_id')
-    date_created = data.get('date_created')
+    team_id = data.get('team_ID')
+    name = data.get('name')
+    league_id = data.get('league_ID')
 
-    if not all([team_name, created_by_player_id, date_created]):
+    if not all([team_id, name, league_id]):
         return handle_error("Missing required fields", 400)
 
     cursor = mysql.connection.cursor()
     cursor.execute(
-        "INSERT INTO Teams (team_name, created_by_player_id, date_created) VALUES (%s, %s, %s)",
-        (team_name, created_by_player_id, date_created)
+        "INSERT INTO Teams (Team_ID, Name, League_ID) VALUES (%s, %s, %s)", 
+        (team_id, name, league_id)
     )
     mysql.connection.commit()
 
-    cursor.execute("SELECT * FROM Teams WHERE team_id = LAST_INSERT_ID()")
+    cursor.execute("SELECT * FROM Teams WHERE Team_ID = %s", (team_id,))
     team = cursor.fetchone()
 
     if not team:
         return handle_error("Failed to retrieve the added team", 500)
 
     return jsonify({
-        "team_id": team[0], 
-        "team_name": team[1], 
-        "created_by_player_id": team[2], 
-        "date_created": team[3]
+        "team_ID": team[0], 
+        "name": team[1], 
+        "league_ID": team[2]
+    }), 201
+
+@app.route("/players", methods=["POST"])
+def add_player():
+    data = request.get_json()
+    player_id = data.get('player_ID')
+    name = data.get('name')
+    age = data.get('age')
+    position = data.get('position')
+    team_id = data.get('team_ID')
+
+    if not all([player_id, name, age, position, team_id]):
+        return handle_error("Missing required fields", 400)
+
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        "INSERT INTO Players (Player_ID, Name, Age, Position, Team_ID) VALUES (%s, %s, %s, %s, %s)", 
+        (player_id, name, age, position, team_id)
+    )
+    mysql.connection.commit()
+
+    cursor.execute("SELECT * FROM Players WHERE Player_ID = %s", (player_id,))
+    player = cursor.fetchone()
+
+    if not player:
+        return handle_error("Failed to retrieve the added player", 500)
+
+    return jsonify({
+        "player_ID": player[0], 
+        "name": player[1], 
+        "age": player[2], 
+        "position": player[3], 
+        "team_ID": player[4]
     }), 201
 
 @app.route("/matches", methods=["POST"])
 def add_match():
     data = request.get_json()
-    game_code = data.get('game_code')
-    team_1_id = data.get('team_1_id')
-    team_2_id = data.get('team_2_id')
-    match_date = data.get('match_date')
-    result = data.get('result')
+    match_id = data.get('match_ID')
+    home_team_id = data.get('home_team_ID')
+    away_team_id = data.get('away_team_ID')
+    date = data.get('date')
+    home_score = data.get('home_score')
+    away_score = data.get('away_score')
 
-    if not all([game_code, team_1_id, team_2_id, match_date]):
+    if not all([match_id, home_team_id, away_team_id, date, home_score, away_score]):
         return handle_error("Missing required fields", 400)
 
     cursor = mysql.connection.cursor()
     cursor.execute(
-        "INSERT INTO Matches (game_code, team_1_id, team_2_id, match_date, result) VALUES (%s, %s, %s, %s, %s)",
-        (game_code, team_1_id, team_2_id, match_date, result)
+        "INSERT INTO Matches (Match_ID, Home_Team_ID, Away_Team_ID, Date, Home_Score, Away_Score) VALUES (%s, %s, %s, %s, %s, %s)",
+        (match_id, home_team_id, away_team_id, date, home_score, away_score)
     )
     mysql.connection.commit()
 
-    cursor.execute("SELECT * FROM Matches WHERE match_id = LAST_INSERT_ID()")
+    cursor.execute("SELECT * FROM Matches WHERE Match_ID = %s", (match_id,))
     match = cursor.fetchone()
 
     if not match:
         return handle_error("Failed to retrieve the added match", 500)
 
     return jsonify({
-        "match_id": match[0],
-        "game_code": match[1], 
-        "team_1_id": match[2], 
-        "team_2_id": match[3], 
-        "match_date": match[4], 
-        "result": match[5]
+        "match_ID": match[0], 
+        "home_team_ID": match[1], 
+        "away_team_ID": match[2], 
+        "date": match[3], 
+        "home_score": match[4], 
+        "away_score": match[5]
     }), 201
 
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.route("/leagues/<int:league_id>", methods=["DELETE"])
+def delete_league(league_id):
+    cursor = mysql.connection.cursor()
+    cursor.execute("DELETE FROM Leagues WHERE League_ID = %s", (league_id,))
+    mysql.connection.commit()
+
+    if cursor.rowcount == 0:
+        return handle_error("League not found", 404)
+
+    return jsonify({"message": "League deleted successfully"}), 200
+
+@app.route("/teams/<int:team_id>", methods=["DELETE"])
+def delete_team(team_id):
+    cursor = mysql.connection.cursor()
+    cursor.execute("DELETE FROM Teams WHERE Team
