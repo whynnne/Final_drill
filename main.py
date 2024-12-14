@@ -234,6 +234,4 @@ def delete_league(league_id):
     return jsonify({"message": "League deleted successfully"}), 200
 
 @app.route("/teams/<int:team_id>", methods=["DELETE"])
-def delete_team(team_id):
-    cursor = mysql.connection.cursor()
-    cursor.execute("DELETE FROM Teams WHERE Team
+
