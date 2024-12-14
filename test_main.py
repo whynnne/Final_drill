@@ -29,7 +29,7 @@ def test_get_players_empty(mock_db):
     assert b"No players found" in response.data
 
 def test_get_players(mock_db):
-    mock_db.fetchall.return_value = [(1, 'Lionel Messi', 35, 'Forward'), (2, 'Cristiano Ronaldo', 37, 'Forward')]
+    mock_db.fetchall.return_value = [(1, 'Lionel Messi', 35, 'Forward', 'Paris Saint-Germain'), (2, 'Cristiano Ronaldo', 37, 'Forward', 'Al Nassr')]
 
     client = app.test_client()
     response = client.get('/players')
@@ -43,20 +43,19 @@ def test_add_player_missing_fields(mock_db):
     response = client.post('/players', json={})
 
     assert response.status_code == 400
-    assert b"Player ID and name are required" in response.data
+    assert b"Player ID, name, and team are required" in response.data
 
 def test_add_player_success(mock_db):
     mock_db.rowcount = 1
-    mock_db.fetchone.return_value = (1, 'Lionel Messi')
+    mock_db.fetchone.return_value = (1, 'Lionel Messi', 35, 'Forward', 'Paris Saint-Germain')
 
     client = app.test_client()
-    response = client.post('/players', json={'player_ID': 1, 'name': 'Lionel Messi', 'age': 35, 'position': 'Forward'})
+    response = client.post('/players', json={'player_ID': 1, 'name': 'Lionel Messi', 'age': 35, 'position': 'Forward', 'team': 'Paris Saint-Germain'})
 
     assert response.status_code == 201
     assert b"player_ID" in response.data
     assert b"1" in response.data
     assert b"Lionel Messi" in response.data
-    
 
 def test_update_player_missing_fields(mock_db):
     client = app.test_client()
@@ -82,7 +81,7 @@ def test_delete_player_not_found(mock_db):
     assert b"Player not found" in response.data
 
 def test_delete_player_success(mock_db):
-    mock_db.fetchone.return_value = (1, 'Lionel Messi')
+    mock_db.fetchone.return_value = (1, 'Lionel Messi', 35, 'Forward', 'Paris Saint-Germain')
     mock_db.rowcount = 1
 
     client = app.test_client()
