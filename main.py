@@ -102,31 +102,24 @@ def register():
     data = request.get_json()
     if not data or not data.get("username") or not data.get("password") or not data.get("role"):
         return handle_error("Missing required fields: username, password, and role are mandatory", 400)
-    
     username = data["username"]
     password = bcrypt.generate_password_hash(data["password"]).decode("utf-8")
     role = data["role"]
-
     load_from_json()
     for user in users_data["users"]:
         if user["username"] == username:
             return handle_error("Username already exists", 400)
-
     new_user = {"username": username, "password": password, "role": role}
     users_data["users"].append(new_user)
     save_to_json()
-
     return jsonify({"message": "User registered successfully"}), 201
-
 @app.route("/login", methods=["POST"])
 def login():
     data = request.get_json()
     if not data or not data.get("username") or not data.get("password"):
         return handle_error("Missing required fields: username and password are mandatory", 400)
-    
     username = data["username"]
     password = data["password"]
-    
     load_from_json()
     for user in users_data["users"]:
         if user["username"] == username and bcrypt.check_password_hash(user["password"], password):
@@ -141,7 +134,6 @@ def login():
             )
             return jsonify({"token": token}), 200
     return handle_error("Invalid credentials", 401)
-
 # CRUD for Players Table
 @app.route("/players", methods=["GET"])
 def get_players():
@@ -166,7 +158,13 @@ def get_players():
 def add_player():
     current_user, error = validate_token()
     if error:
-        return error
+        return error 
+    
+    required_role = "admin"
+    role_error = validate_role(current_user, required_role)
+    if role_error:
+        return role_error 
+
 
     data = request.get_json()
     first_name = data.get('first_name')
@@ -190,6 +188,11 @@ def update_player(player_id):
     current_user, error = validate_token()
     if error:
         return error
+    
+    required_role = "admin"
+    role_error = validate_role(current_user, required_role)
+    if role_error:
+        return role_error 
 
     data = request.get_json()
     first_name = data.get('first_name')
@@ -227,6 +230,11 @@ def delete_player(player_id):
     current_user, error = validate_token()
     if error:
         return error
+    
+    required_role = "admin"
+    role_error = validate_role(current_user, required_role)
+    if role_error:
+        return role_error 
 
     cursor = mysql.connection.cursor()
     cursor.execute("DELETE FROM Players WHERE player_id = %s", (player_id,))
@@ -249,6 +257,10 @@ def add_game():
     current_user, error = validate_token()
     if error:
         return error
+    required_role = "admin"
+    role_error = validate_role(current_user, required_role)
+    if role_error:
+        return role_error 
 
     data = request.get_json()
     game_name = data.get('game_name')
@@ -270,6 +282,11 @@ def update_game(game_code):
     current_user, error = validate_token()
     if error:
         return error
+    
+    required_role = "admin"
+    role_error = validate_role(current_user, required_role)
+    if role_error:
+        return role_error 
 
     data = request.get_json()
     game_name = data.get('game_name')
@@ -299,6 +316,10 @@ def delete_game(game_code):
     current_user, error = validate_token()
     if error:
         return error
+    required_role = "admin"
+    role_error = validate_role(current_user, required_role)
+    if role_error:
+        return role_error 
 
     cursor = mysql.connection.cursor()
     cursor.execute("DELETE FROM Games WHERE game_code = %s", (game_code,))
@@ -321,6 +342,11 @@ def add_team():
     current_user, error = validate_token()
     if error:
         return error
+    
+    required_role = "admin"
+    role_error = validate_role(current_user, required_role)
+    if role_error:
+        return role_error 
 
     data = request.get_json()
     team_name = data.get('team_name')
@@ -338,6 +364,11 @@ def update_team(team_id):
     current_user, error = validate_token()
     if error:
         return error
+    
+    required_role = "admin"
+    role_error = validate_role(current_user, required_role)
+    if role_error:
+        return role_error 
 
     data = request.get_json()
     team_name = data.get('team_name')
@@ -355,6 +386,11 @@ def delete_team(team_id):
     current_user, error = validate_token()
     if error:
         return error
+    
+    required_role = "admin"
+    role_error = validate_role(current_user, required_role)
+    if role_error:
+        return role_error 
 
     cursor = mysql.connection.cursor()
     cursor.execute("DELETE FROM Teams WHERE team_id = %s", (team_id,))
@@ -362,11 +398,40 @@ def delete_team(team_id):
     return jsonify({"message": f"Team with ID {team_id} deleted"}), 200
 
 # CRUD for Matches Table
+@app.route("/matches", methods=["GET"])
+def get_matches():
+
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT * FROM Matches")
+    matches = cursor.fetchall()
+
+    if not matches:
+        return handle_error("No matches found", 404)
+
+    matches_list = [
+        {
+            "match_id": match[0],
+            "game_code": match[1],
+            "team_1_id": match[2],
+            "team_2_id": match[3],
+            "match_date": match[4],
+            "result": match[5]
+        }
+        for match in matches
+    ]
+
+    return jsonify(matches_list), 200
+
 @app.route("/matches", methods=["POST"])
 def add_match():
     current_user, error = validate_token()
     if error:
         return error
+    
+    required_role = "admin"
+    role_error = validate_role(current_user, required_role)
+    if role_error:
+        return role_error 
 
     data = request.get_json()
     game_code = data.get('game_code')
@@ -391,6 +456,10 @@ def update_match(match_id):
     current_user, error = validate_token()
     if error:
         return error
+    required_role = "admin"
+    role_error = validate_role(current_user, required_role)
+    if role_error:
+        return role_error 
 
     data = request.get_json()
     game_code = data.get('game_code')
@@ -432,6 +501,11 @@ def delete_match(match_id):
     current_user, error = validate_token()
     if error:
         return error
+    
+    required_role = "admin"
+    role_error = validate_role(current_user, required_role)
+    if role_error:
+        return role_error 
 
     cursor = mysql.connection.cursor()
     cursor.execute("DELETE FROM Matches WHERE match_id = %s", (match_id,))
